@@ -20,6 +20,7 @@ import datetime
 import collections
 from eot_decoder import EOT_decode
 import zmq
+import csv
 
 # Socket to talk to server
 context = zmq.Context()
@@ -28,6 +29,17 @@ sock = context.socket(zmq.SUB)
 # create fixed length queue
 queue = collections.deque(maxlen=256)
 
+working_csv_filename = f"logs/eot_log_{datetime.datetime.now().isoformat()}.csv"
+
+def open_csv():
+    with open(working_csv_filename, mode='w') as eot_file:
+        eot_writer = csv.writer(eot_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        eot_writer.writerow(['Timestamp', 'Unit Address', 'Pressure', 'Motion', 'Marker Light', 'Turbine', 'Battery Cond', 'Battery Charge', 'Arm Status'])
+
+def logEOT(EOT):
+    with open(working_csv_filename, mode='a') as eot_file:
+        eot_writer = csv.writer(eot_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        eot_writer.writerow([datetime.datetime.now().isoformat(), EOT.unit_addr, EOT.pressure, EOT.motion, EOT.mkr_light, EOT.turbine, EOT.batt_cond_text, EOT.batt_charge, EOT.arm_status])
 
 def printEOT(EOT):
     localtime = str(datetime.datetime.now().
@@ -64,6 +76,8 @@ def main():
                 EOT = EOT_decode(buffer[6:])  # first 6 bits are bit sync
                 if (EOT.valid):
                     printEOT(EOT)
+                    logEOT(EOT)
 
-
-main()
+if __name__ == '__main__':
+    open_csv()
+    main()
